@@ -1,0 +1,299 @@
+<!DOCTYPE html>
+<html lang="fr">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Statistiques des Joueurs de Football</title>
+    <style>
+      body {
+        font-family: Arial, sans-serif;
+        line-height: 1.6;
+        margin: 0;
+        padding: 20px;
+        background-color: #f4f4f4;
+      }
+      h1 {
+        color: #333;
+        text-align: center;
+      }
+      .nav-buttons {
+        text-align: right;
+        margin-bottom: 20px;
+      }
+      .nav-button {
+        display: inline-block;
+        padding: 10px 20px;
+        background-color: #4caf50;
+        color: white;
+        text-decoration: none;
+        border-radius: 4px;
+        margin-left: 10px;
+      }
+      .sort-buttons {
+        margin: 20px 0;
+        text-align: center;
+      }
+      .sort-button {
+        padding: 10px 15px;
+        margin: 0 5px;
+        background-color: #4caf50;
+        color: white;
+        border: none;
+        border-radius: 4px;
+        cursor: pointer;
+      }
+      .sort-button:hover {
+        background-color: #45a049;
+      }
+      .sort-button.active {
+        background-color: #357a38;
+      }
+      table {
+        width: 100%;
+        border-collapse: collapse;
+        margin-top: 20px;
+        background-color: #fff;
+        box-shadow: 0 0 20px rgba(0, 0, 0, 0.1);
+      }
+      th,
+      td {
+        padding: 12px;
+        text-align: left;
+        border-bottom: 1px solid #ddd;
+      }
+      th {
+        background-color: #4caf50;
+        color: white;
+        cursor: pointer;
+      }
+      tr:hover {
+        background-color: #f5f5f5;
+      }
+      a {
+        color: #1a73e8;
+        text-decoration: none;
+      }
+      a:hover {
+        text-decoration: underline;
+      }
+      .delete-btn {
+        background-color: #f44336;
+        color: white;
+        border: none;
+        padding: 5px 10px;
+        cursor: pointer;
+        border-radius: 3px;
+      }
+      .delete-btn:hover {
+        background-color: #d32f2f;
+      }
+      .edit-club {
+        background-color: #2196f3;
+        color: white;
+        border: none;
+        padding: 5px 10px;
+        cursor: pointer;
+        border-radius: 3px;
+      }
+      .edit-club:hover {
+        background-color: #1976d2;
+      }
+    </style>
+  </head>
+  <body>
+    <h1>Statistiques des Joueurs de Football</h1>
+
+    <div class="nav-buttons">
+      <a href="add-player.html" class="nav-button">Ajouter un joueur</a>
+      <a href="register-goals.html" class="nav-button">Enregistrer des buts</a>
+      <a href="birthplace-map.html" class="nav-button">Lieu de naissance</a>
+    </div>
+
+    <div class="sort-buttons">
+      <button class="sort-button" onclick="sortPlayers('goals')">
+        Meilleurs Buteurs
+      </button>
+      <button class="sort-button" onclick="sortPlayers('assists')">
+        Meilleurs Passeurs
+      </button>
+      <button class="sort-button" onclick="sortPlayers('total')">
+        Meilleurs Buteurs + Passeurs
+      </button>
+    </div>
+
+    <table id="playersTable">
+      <thead>
+        <tr>
+          <th onclick="sortTable(0)">Nom du Joueur</th>
+          <th onclick="sortTable(1)">Club</th>
+          <th onclick="sortTable(2)">Nationalité</th>
+          <th onclick="sortTable(3)">Buts</th>
+          <th onclick="sortTable(4)">Passes Décisives</th>
+          <th onclick="sortTable(5)">Total (B+P)</th>
+          <th>Actions</th>
+        </tr>
+      </thead>
+      <tbody>
+        <!-- Les données des joueurs seront insérées ici dynamiquement -->
+      </tbody>
+    </table>
+
+    <script>
+      let currentSort = "";
+
+      function updatePlayerTable() {
+        const playerStats =
+          JSON.parse(localStorage.getItem("playerStats")) || {};
+        const players = Object.values(playerStats);
+
+        // Appliquer le tri actuel
+        if (currentSort) {
+          sortPlayers(currentSort, false);
+        } else {
+          renderPlayers(players);
+        }
+      }
+
+      function renderPlayers(players) {
+        const tableBody = document.querySelector("#playersTable tbody");
+        tableBody.innerHTML = "";
+
+        players.forEach((stats) => {
+          const row = tableBody.insertRow();
+          row.innerHTML = `
+                    <td><a href="player-profile.html?name=${encodeURIComponent(
+                      stats.name
+                    )}">${stats.name}</a></td>
+                    <td>${stats.club || "Non renseigné"}</td>
+                    <td>${stats.nationality || "Non renseigné"}</td>
+                    <td>${stats.goals || 0}</td>
+                    <td>${stats.assists || 0}</td>
+                    <td>${(stats.goals || 0) + (stats.assists || 0)}</td>
+                    <td>
+                        <button class="edit-club" onclick="editClub('${
+                          stats.name
+                        }')">Éditer Club</button>
+                        <button class="delete-btn" onclick="deletePlayer('${
+                          stats.name
+                        }')">Supprimer</button>
+                    </td>
+                `;
+        });
+      }
+
+      function sortPlayers(criteria, updateButtons = true) {
+        currentSort = criteria;
+        const playerStats =
+          JSON.parse(localStorage.getItem("playerStats")) || {};
+        let players = Object.values(playerStats);
+
+        players.sort((a, b) => {
+          if (criteria === "total") {
+            return (
+              (b.goals || 0) +
+              (b.assists || 0) -
+              ((a.goals || 0) + (a.assists || 0))
+            );
+          } else {
+            return (b[criteria] || 0) - (a[criteria] || 0);
+          }
+        });
+
+        renderPlayers(players);
+
+        if (updateButtons) {
+          // Mise à jour visuelle des boutons
+          document.querySelectorAll(".sort-button").forEach((button) => {
+            button.classList.remove("active");
+          });
+          event.target.classList.add("active");
+        }
+      }
+
+      function sortTable(n) {
+        var table,
+          rows,
+          switching,
+          i,
+          x,
+          y,
+          shouldSwitch,
+          dir,
+          switchcount = 0;
+        table = document.getElementById("playersTable");
+        switching = true;
+        dir = "asc";
+        while (switching) {
+          switching = false;
+          rows = table.rows;
+          for (i = 1; i < rows.length - 1; i++) {
+            shouldSwitch = false;
+            x = rows[i].getElementsByTagName("TD")[n];
+            y = rows[i + 1].getElementsByTagName("TD")[n];
+            if (dir == "asc") {
+              if (x.innerHTML.toLowerCase() > y.innerHTML.toLowerCase()) {
+                shouldSwitch = true;
+                break;
+              }
+            } else if (dir == "desc") {
+              if (x.innerHTML.toLowerCase() < y.innerHTML.toLowerCase()) {
+                shouldSwitch = true;
+                break;
+              }
+            }
+          }
+          if (shouldSwitch) {
+            rows[i].parentNode.insertBefore(rows[i + 1], rows[i]);
+            switching = true;
+            switchcount++;
+          } else {
+            if (switchcount == 0 && dir == "asc") {
+              dir = "desc";
+              switching = true;
+            }
+          }
+        }
+      }
+
+      function deletePlayer(playerName) {
+        if (
+          confirm(
+            `Êtes-vous sûr de vouloir supprimer ${playerName} de la liste ?`
+          )
+        ) {
+          let playerStats =
+            JSON.parse(localStorage.getItem("playerStats")) || {};
+          delete playerStats[playerName];
+          localStorage.setItem("playerStats", JSON.stringify(playerStats));
+          updatePlayerTable();
+        }
+      }
+
+      function editClub(playerName) {
+        let playerStats = JSON.parse(localStorage.getItem("playerStats")) || {};
+        const newClub = prompt(
+          `Entrez le nouveau club pour ${playerName}:`,
+          playerStats[playerName].club || ""
+        );
+        if (newClub !== null) {
+          playerStats[playerName].club = newClub;
+          localStorage.setItem("playerStats", JSON.stringify(playerStats));
+          updatePlayerTable();
+        }
+      }
+
+      // Mettre à jour le tableau au chargement de la page
+      updatePlayerTable();
+
+      // Mettre à jour le tableau toutes les 5 secondes
+      setInterval(updatePlayerTable, 5000);
+
+      // Écouter les changements dans le localStorage
+      window.addEventListener("storage", function (e) {
+        if (e.key === "playerStats" || e.key === "goals" || e.key === null) {
+          updatePlayerTable();
+        }
+      });
+    </script>
+  </body>
+</html>
